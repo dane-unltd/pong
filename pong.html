@@ -17,8 +17,7 @@ var ents = new Object()
 var actions = 0
 var interval = 1000/30;
 var camera, scene, renderer;
-var pGeom, p1mat, p2mat;
-var ballGeom, ballMat;
+var mat;
 
 function init3d() {
 	camera = new THREE.PerspectiveCamera( 75, 400/300, 1, 10000 );
@@ -26,17 +25,19 @@ function init3d() {
 
 	scene = new THREE.Scene();
 
-	pGeom = new THREE.CubeGeometry( 10, 40, 10 );
-	p1mat = new THREE.MeshBasicMaterial( { color: 0xff0000, wireframe: true } );
-	p2mat = new THREE.MeshBasicMaterial( { color: 0x0000ff, wireframe: true } );
-
-	ballGeom = new THREE.CubeGeometry(5,5,5);
-	ballMat = new THREE.MeshBasicMaterial( { color: 0x00ff00, wireframe: true } );
+	mat = new THREE.MeshBasicMaterial( { color: 0xff0000, wireframe: true } );
 
 	renderer = new THREE.CanvasRenderer();
 	renderer.setSize( 400, 300)
 
 	document.body.appendChild( renderer.domElement);
+}
+
+function newMesh(size) {
+	var geom = new THREE.CubeGeometry( size[0], size[1], size[2] );
+	var mesh = new THREE.Mesh(geom,mat)
+	scene.add(mesh)
+	return mesh
 }
 
 $(document).ready(function() {
@@ -63,9 +64,6 @@ $(document).ready(function() {
 			for (var i = 0; i<nEnts; i++) {
 				if (!ents[ids[i]]) {
 					newEnts[ids[i]]=new Object()
-					newEnts[ids[i]].mesh =
-						new THREE.Mesh(pGeom,ballMat)
-					scene.add(newEnts[ids[i]].mesh)
 				}else{
 					newEnts[ids[i]] = ents[ids[i]]
 					delete ents[ids[i]]
@@ -79,7 +77,8 @@ $(document).ready(function() {
 				var byIx = Math.floor(i / 8)
 				var bitIx = (i % 8)
 				if ((bitMask[byIx] & (1<<bitIx))>0) {
-					newEnts[ids[i]].pos = state.readFloat64Array(3)
+					newEnts[ids[i]].pos =
+					       	state.readFloat64Array(3)
 				}
 				
 			}
@@ -90,6 +89,30 @@ $(document).ready(function() {
 				var bitIx = (i % 8)
 				if ((bitMask[byIx] & (1<<bitIx))>0) {
 					newEnts[ids[i]].vel =
+						state.readFloat64Array(3)
+				}
+				
+			}
+
+			var bitMask = state.readUint8Array(nBytes)
+			for (var i = 0; i<nEnts; i++) {
+				var byIx = Math.floor(i / 8)
+				var bitIx = (i % 8)
+				if ((bitMask[byIx] & (1<<bitIx))>0) {
+					newEnts[ids[i]].size =
+						state.readFloat64Array(3)
+					newEnts[ids[i]].mesh =
+						newMesh(newEnts[ids[i]].size)
+				}
+				
+			}
+
+			var bitMask = state.readUint8Array(nBytes)
+			for (var i = 0; i<nEnts; i++) {
+				var byIx = Math.floor(i / 8)
+				var bitIx = (i % 8)
+				if ((bitMask[byIx] & (1<<bitIx))>0) {
+					newEnts[ids[i]].ori =
 						state.readFloat64Array(3)
 				}
 				
@@ -141,10 +164,12 @@ function clientFrame() {
 		window.requestAnimationFrame(clientFrame);
 
 		for(var id in ents) {
-		ents[id].mesh.position.set(
-			ents[id].pos[0],
-			ents[id].pos[1],
-			ents[id].pos[2])
+			if (ents[id].mesh&&ents[id].pos) {
+				ents[id].mesh.position.set(
+					ents[id].pos[0],
+					ents[id].pos[1],
+					ents[id].pos[2])
+			}
 		}
 		renderer.render(scene, camera)
 		sendCmd();
