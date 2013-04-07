@@ -44,7 +44,7 @@ $(document).ready(function() {
 	if ("WebSocket" in window) {
 		init3d()
 		// Let us open a web socket
-		ws = new WebSocket("ws://t:9000/ws/pong");
+		ws = new WebSocket("ws://localhost/ws/pong");
 		ws.binaryType = "arraybuffer";
 		ws.onopen = function() {
 			console.log("sending commands")
