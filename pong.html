@@ -3,7 +3,7 @@
 <title>Pong</title>
 <style>
     body {
-        width: 35em;
+        width: 640px;
         margin: 0 auto;
         font-family: Tahoma, Verdana, Arial, sans-serif;
     }
@@ -18,13 +18,16 @@ var actions = 0
 var interval = 1000/30;
 var camera, scene, renderer;
 var mat;
+var cube,sphere
 
 function init3d() {
 	camera = new THREE.PerspectiveCamera( 45, 400/300, 1, 10000 );
-	camera.position.z = 150;
+	camera.position.z = 200;
 
 	scene = new THREE.Scene();
 
+	cube = new THREE.CubeGeometry(1,1,1)
+	sphere = new THREE.SphereGeometry(1)
 	mat = new THREE.MeshBasicMaterial( { color: 0xff0000, wireframe: true } );
 
 	renderer = new THREE.CanvasRenderer();
@@ -33,9 +36,17 @@ function init3d() {
 	document.body.appendChild( renderer.domElement);
 }
 
-function newMesh(size) {
-	var geom = new THREE.CubeGeometry( size[0], size[1], size[2] );
-	var mesh = new THREE.Mesh(geom,mat)
+function newMesh(model,size) {
+	var mesh
+	console.log("model: "+model)
+	if (model==2){
+		mesh = new THREE.Mesh(sphere,mat)
+	}else {
+		mesh = new THREE.Mesh(cube,mat)
+	}
+	mesh.scale.x=size[0]
+	mesh.scale.y=size[1]
+	mesh.scale.z=size[2]
 	scene.add(mesh)
 	return mesh
 }
@@ -44,7 +55,7 @@ $(document).ready(function() {
 	if ("WebSocket" in window) {
 		init3d()
 		// Let us open a web socket
-		ws = new WebSocket("ws://localhost/ws/pong");
+		ws = new WebSocket("ws://"+document.location.host+"/ws/pong");
 		ws.binaryType = "arraybuffer";
 		ws.onopen = function() {
 			console.log("sending commands")
@@ -101,8 +112,6 @@ $(document).ready(function() {
 				if ((bitMask[byIx] & (1<<bitIx))>0) {
 					newEnts[ids[i]].size =
 						state.readFloat64Array(3)
-					newEnts[ids[i]].mesh =
-						newMesh(newEnts[ids[i]].size)
 				}
 				
 			}
@@ -114,6 +123,20 @@ $(document).ready(function() {
 				if ((bitMask[byIx] & (1<<bitIx))>0) {
 					newEnts[ids[i]].ori =
 						state.readFloat64Array(3)
+				}
+				
+			}
+
+			var bitMask = state.readUint8Array(nBytes)
+			for (var i = 0; i<nEnts; i++) {
+				var byIx = Math.floor(i / 8)
+				var bitIx = (i % 8)
+				if ((bitMask[byIx] & (1<<bitIx))>0) {
+					newEnts[ids[i]].model =
+						state.readUint32()
+					newEnts[ids[i]].mesh =
+						newMesh(newEnts[ids[i]].model,
+							newEnts[ids[i]].size)
 				}
 				
 			}
